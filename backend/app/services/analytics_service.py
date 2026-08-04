@@ -3,9 +3,8 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from sqlalchemy import func, select, and_, case
 from sqlalchemy.ext.asyncio import AsyncSession
-import numpy as np
 
-from app.models.telemetry import RequestLog, ErrorLog
+from app.models.telemetry import RequestLog
 from app.schemas.analytics import (
     LatencyPoint, LatencyAnalyticsResponse,
     ErrorPoint, TopFailingEndpoint, ErrorAnalyticsResponse,

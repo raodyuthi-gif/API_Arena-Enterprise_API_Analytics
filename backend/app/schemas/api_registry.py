@@ -1,7 +1,7 @@
 """Pydantic schemas for API Registry."""
 import uuid
 from datetime import datetime
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, Field
 from app.models.api_registry import APIStatus
 
 

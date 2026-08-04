@@ -2,7 +2,6 @@
 import uuid
 from fastapi import APIRouter, HTTPException
 from sqlalchemy import select
-from sqlalchemy.orm import selectinload
 
 from app.dependencies import DbSession, CurrentUser
 from app.models.api_registry import APIEndpoint

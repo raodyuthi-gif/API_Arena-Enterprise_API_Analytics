@@ -1,7 +1,6 @@
 """Authentication router - login, refresh, logout, API keys."""
 from datetime import timedelta
-from fastapi import APIRouter, HTTPException, status, Depends
-from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import APIRouter, HTTPException, status
 
 from app.config import settings
 from app.dependencies import DbSession, CurrentUser

@@ -1,5 +1,5 @@
 """Telemetry router - ingest request logs."""
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter
 
 from app.dependencies import DbSession, CurrentUser
 from app.schemas.telemetry import BatchIngestRequest, IngestResponse

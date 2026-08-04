@@ -5,7 +5,6 @@ from fastapi import APIRouter, HTTPException, Query
 from app.dependencies import DbSession, CurrentUser, CurrentAnalyst
 from app.schemas.forecast import ForecastResponse, TrainRequest, TrainResponse, AnomalyPoint
 from app.services.forecast_service import ForecastService
-from app.config import settings
 
 router = APIRouter()
 

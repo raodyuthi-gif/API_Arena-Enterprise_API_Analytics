@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.models.telemetry import RequestLog
-from app.models.forecast import ForecastModel, ForecastResult, ForecastModelType
+from app.models.forecast import ForecastModel, ForecastModelType
 from app.schemas.forecast import ForecastResponse, ForecastPoint, TrainResponse, AnomalyPoint
 
 
@@ -83,7 +83,7 @@ class ForecastService:
 
         # Mark all previous models inactive
         old_models = (await db.execute(
-            select(ForecastModel).where(and_(ForecastModel.api_id == api_id, ForecastModel.is_active == True))
+            select(ForecastModel).where(and_(ForecastModel.api_id == api_id, ForecastModel.is_active is True))
         )).scalars().all()
         for old in old_models:
             old.is_active = False
@@ -119,7 +119,7 @@ class ForecastService:
         """Load the active model and generate a forecast."""
         result = await db.execute(
             select(ForecastModel).where(
-                and_(ForecastModel.api_id == api_id, ForecastModel.is_active == True)
+                and_(ForecastModel.api_id == api_id, ForecastModel.is_active is True)
             ).order_by(ForecastModel.created_at.desc()).limit(1)
         )
         model_record = result.scalar_one_or_none()
@@ -175,7 +175,7 @@ class ForecastService:
         """
         result = await db.execute(
             select(ForecastModel).where(
-                and_(ForecastModel.api_id == api_id, ForecastModel.is_active == True)
+                and_(ForecastModel.api_id == api_id, ForecastModel.is_active is True)
             ).order_by(ForecastModel.created_at.desc()).limit(1)
         )
         model_record = result.scalar_one_or_none()

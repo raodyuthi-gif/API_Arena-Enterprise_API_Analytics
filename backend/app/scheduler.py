@@ -8,7 +8,7 @@ claim in the README actually true.
 """
 import logging
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from sqlalchemy import select, and_
+from sqlalchemy import select
 
 from app.config import settings
 from app.database import AsyncSessionLocal
@@ -25,7 +25,7 @@ async def retrain_all_active_models() -> None:
     existing model_type. Failures for one API don't block the others.
     """
     async with AsyncSessionLocal() as db:
-        result = await db.execute(select(ForecastModel).where(ForecastModel.is_active == True))
+        result = await db.execute(select(ForecastModel).where(ForecastModel.is_active is True))
         active_models = result.scalars().all()
 
         logger.info("Scheduled retrain: %d active model(s) to refresh", len(active_models))

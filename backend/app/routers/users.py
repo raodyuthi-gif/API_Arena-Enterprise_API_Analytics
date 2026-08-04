@@ -2,7 +2,6 @@
 import uuid
 from fastapi import APIRouter, HTTPException, status, Query
 from sqlalchemy import select, func
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dependencies import CurrentUser, CurrentAdmin, DbSession
 from app.models.user import User

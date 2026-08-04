@@ -4,7 +4,6 @@ Enterprise API Analytics Platform - FastAPI Application Entry Point
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from prometheus_fastapi_instrumentator import Instrumentator
 
 from app.config import settings
