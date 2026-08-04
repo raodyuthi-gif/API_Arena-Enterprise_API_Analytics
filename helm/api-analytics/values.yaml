@@ -1,5 +1,5 @@
 backend:
-  image: enterprise-api-analytics-backend:latest
+  image: dhanyashreekr/api-analytics-backend:latest
   replicas: 2
   port: 8000
   resources:
@@ -12,7 +12,7 @@ backend:
     PROMETHEUS_ENABLED: "true"
 
 frontend:
-  image: enterprise-api-analytics-frontend:latest
+  image: dhanyashreekr/api-analytics-frontend:latest
   replicas: 2
   port: 80
   resources:
