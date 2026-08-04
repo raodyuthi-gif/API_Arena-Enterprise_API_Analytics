@@ -1,4 +1,5 @@
 """Pydantic schemas for API Registry."""
+
 import uuid
 from datetime import datetime
 from pydantic import BaseModel, Field
@@ -37,7 +38,9 @@ class APIEndpointCreate(BaseModel):
     description: str | None = None
     base_url: str = Field(..., max_length=500)
     path: str = Field(..., max_length=500)
-    method: str = Field(default="GET", pattern=r"^(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)$")
+    method: str = Field(
+        default="GET", pattern=r"^(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)$"
+    )
     owner_team: str | None = None
     owner_email: str | None = None
     status: APIStatus = APIStatus.ACTIVE

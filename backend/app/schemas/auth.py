@@ -1,4 +1,5 @@
 """Pydantic schemas for authentication."""
+
 from pydantic import BaseModel, EmailStr
 
 
@@ -26,7 +27,7 @@ class APIKeyCreate(BaseModel):
 class APIKeyResponse(BaseModel):
     id: str
     name: str
-    key: str          # Only returned once at creation
+    key: str  # Only returned once at creation
     created_at: str
     expires_at: str | None
 

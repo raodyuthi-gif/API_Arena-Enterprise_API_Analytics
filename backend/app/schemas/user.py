@@ -1,4 +1,5 @@
 """Pydantic schemas for User management."""
+
 import uuid
 from datetime import datetime
 from pydantic import BaseModel, EmailStr, Field

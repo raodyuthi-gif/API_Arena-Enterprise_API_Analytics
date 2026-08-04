@@ -1,4 +1,5 @@
 """Pytest configuration and shared fixtures."""
+
 import asyncio
 import pytest
 import pytest_asyncio
@@ -10,7 +11,9 @@ from app.database import Base, get_db
 from app.models.user import User, UserRole
 from app.services.auth_service import AuthService
 
-TEST_DATABASE_URL = "postgresql+asyncpg://postgres:postgres@localhost:5432/api_analytics_test"
+TEST_DATABASE_URL = (
+    "postgresql+asyncpg://postgres:postgres@localhost:5432/api_analytics_test"
+)
 
 test_engine = create_async_engine(TEST_DATABASE_URL, echo=False)
 TestSessionLocal = async_sessionmaker(test_engine, expire_on_commit=False)
@@ -42,7 +45,9 @@ async def client(db):
 
     app.dependency_overrides[get_db] = override_get_db
 
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as ac:
         yield ac
 
     app.dependency_overrides.clear()

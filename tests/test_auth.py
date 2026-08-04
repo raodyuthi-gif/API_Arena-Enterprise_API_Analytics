@@ -1,4 +1,5 @@
 """Tests for authentication: login, refresh, API keys."""
+
 import pytest
 
 from app.services.auth_service import AuthService
@@ -16,7 +17,9 @@ def test_password_hashing_round_trip():
 
 
 async def test_login_success(client, admin_user):
-    resp = await client.post("/auth/login", json={"email": "admin@test.com", "password": "password123"})
+    resp = await client.post(
+        "/auth/login", json={"email": "admin@test.com", "password": "password123"}
+    )
     assert resp.status_code == 200
     body = resp.json()
     assert "access_token" in body
@@ -25,17 +28,23 @@ async def test_login_success(client, admin_user):
 
 
 async def test_login_wrong_password(client, admin_user):
-    resp = await client.post("/auth/login", json={"email": "admin@test.com", "password": "wrong-password"})
+    resp = await client.post(
+        "/auth/login", json={"email": "admin@test.com", "password": "wrong-password"}
+    )
     assert resp.status_code == 401
 
 
 async def test_login_unknown_user(client):
-    resp = await client.post("/auth/login", json={"email": "nobody@test.com", "password": "whatever"})
+    resp = await client.post(
+        "/auth/login", json={"email": "nobody@test.com", "password": "whatever"}
+    )
     assert resp.status_code == 401
 
 
 async def test_refresh_token(client, admin_user):
-    login_resp = await client.post("/auth/login", json={"email": "admin@test.com", "password": "password123"})
+    login_resp = await client.post(
+        "/auth/login", json={"email": "admin@test.com", "password": "password123"}
+    )
     refresh_token = login_resp.json()["refresh_token"]
 
     resp = await client.post("/auth/refresh", json={"refresh_token": refresh_token})

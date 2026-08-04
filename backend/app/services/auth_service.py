@@ -1,4 +1,5 @@
 """Authentication service - JWT creation/validation and password hashing."""
+
 import hashlib
 import secrets
 from datetime import datetime, timedelta, timezone
@@ -29,25 +30,37 @@ class AuthService:
 
     @staticmethod
     def create_access_token(user_id: str, role: str) -> str:
-        expire = datetime.now(timezone.utc) + timedelta(minutes=settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES)
+        expire = datetime.now(timezone.utc) + timedelta(
+            minutes=settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES
+        )
         payload = {"sub": user_id, "role": role, "type": "access", "exp": expire}
-        return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
+        return jwt.encode(
+            payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM
+        )
 
     @staticmethod
     def create_refresh_token(user_id: str) -> str:
-        expire = datetime.now(timezone.utc) + timedelta(days=settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS)
+        expire = datetime.now(timezone.utc) + timedelta(
+            days=settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS
+        )
         payload = {"sub": user_id, "type": "refresh", "exp": expire}
-        return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
+        return jwt.encode(
+            payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM
+        )
 
     @staticmethod
     def decode_token(token: str) -> dict | None:
         try:
-            return jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
+            return jwt.decode(
+                token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM]
+            )
         except JWTError:
             return None
 
     @staticmethod
-    async def authenticate_user(email: str, password: str, db: AsyncSession) -> User | None:
+    async def authenticate_user(
+        email: str, password: str, db: AsyncSession
+    ) -> User | None:
         result = await db.execute(select(User).where(User.email == email))
         user = result.scalar_one_or_none()
         if not user:

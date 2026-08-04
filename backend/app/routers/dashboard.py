@@ -1,4 +1,5 @@
 """Dashboard router - overview + real-time WebSocket stream."""
+
 import asyncio
 import json
 from datetime import datetime, timezone

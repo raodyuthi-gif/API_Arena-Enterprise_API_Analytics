@@ -1,4 +1,5 @@
 """SQLAlchemy async database engine and session management."""
+
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase
 
@@ -25,12 +26,14 @@ AsyncSessionLocal = async_sessionmaker(
 
 class Base(DeclarativeBase):
     """Base class for all SQLAlchemy models."""
+
     pass
 
 
 async def create_tables():
     """Create all tables on startup (dev only; use Alembic in prod)."""
     from app.models import user, api_registry, telemetry, forecast  # noqa: F401
+
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 

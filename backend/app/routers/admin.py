@@ -1,4 +1,5 @@
 """Admin router - system stats and admin-only operations."""
+
 from fastapi import APIRouter
 from sqlalchemy import select, func
 

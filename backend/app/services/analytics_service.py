@@ -1,4 +1,5 @@
 """Analytics service - latency percentiles, error grouping, traffic aggregation."""
+
 import uuid
 from datetime import datetime, timedelta, timezone
 from sqlalchemy import func, select, and_, case
@@ -6,17 +7,21 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.telemetry import RequestLog
 from app.schemas.analytics import (
-    LatencyPoint, LatencyAnalyticsResponse,
-    ErrorPoint, TopFailingEndpoint, ErrorAnalyticsResponse,
-    TrafficPoint, TrafficAnalyticsResponse,
+    LatencyPoint,
+    LatencyAnalyticsResponse,
+    ErrorPoint,
+    TopFailingEndpoint,
+    ErrorAnalyticsResponse,
+    TrafficPoint,
+    TrafficAnalyticsResponse,
     DashboardSummary,
 )
 
 WINDOW_MAP = {
-    "1h":  timedelta(hours=1),
-    "6h":  timedelta(hours=6),
+    "1h": timedelta(hours=1),
+    "6h": timedelta(hours=6),
     "24h": timedelta(hours=24),
-    "7d":  timedelta(days=7),
+    "7d": timedelta(days=7),
     "30d": timedelta(days=30),
 }
 
@@ -46,9 +51,15 @@ class AnalyticsService:
         stmt = (
             select(
                 func.date_trunc(bucket, RequestLog.timestamp).label("bucket"),
-                func.percentile_cont(0.50).within_group(RequestLog.latency_ms).label("p50"),
-                func.percentile_cont(0.90).within_group(RequestLog.latency_ms).label("p90"),
-                func.percentile_cont(0.99).within_group(RequestLog.latency_ms).label("p99"),
+                func.percentile_cont(0.50)
+                .within_group(RequestLog.latency_ms)
+                .label("p50"),
+                func.percentile_cont(0.90)
+                .within_group(RequestLog.latency_ms)
+                .label("p90"),
+                func.percentile_cont(0.99)
+                .within_group(RequestLog.latency_ms)
+                .label("p99"),
                 func.avg(RequestLog.latency_ms).label("avg"),
                 func.count(RequestLog.id).label("count"),
             )
@@ -72,15 +83,12 @@ class AnalyticsService:
         ]
 
         # Overall percentiles
-        all_stmt = (
-            select(
-                func.percentile_cont(0.50).within_group(RequestLog.latency_ms).label("p50"),
-                func.percentile_cont(0.90).within_group(RequestLog.latency_ms).label("p90"),
-                func.percentile_cont(0.99).within_group(RequestLog.latency_ms).label("p99"),
-                func.count(RequestLog.id).label("total"),
-            )
-            .where(and_(RequestLog.api_id == api_id, RequestLog.timestamp >= since))
-        )
+        all_stmt = select(
+            func.percentile_cont(0.50).within_group(RequestLog.latency_ms).label("p50"),
+            func.percentile_cont(0.90).within_group(RequestLog.latency_ms).label("p90"),
+            func.percentile_cont(0.99).within_group(RequestLog.latency_ms).label("p99"),
+            func.count(RequestLog.id).label("total"),
+        ).where(and_(RequestLog.api_id == api_id, RequestLog.timestamp >= since))
         overall = (await db.execute(all_stmt)).one()
 
         return LatencyAnalyticsResponse(
@@ -105,8 +113,12 @@ class AnalyticsService:
             select(
                 func.date_trunc(bucket, RequestLog.timestamp).label("bucket"),
                 func.count(RequestLog.id).label("total"),
-                func.sum(case((RequestLog.status_code.between(400, 499), 1), else_=0)).label("errors_4xx"),
-                func.sum(case((RequestLog.status_code.between(500, 599), 1), else_=0)).label("errors_5xx"),
+                func.sum(
+                    case((RequestLog.status_code.between(400, 499), 1), else_=0)
+                ).label("errors_4xx"),
+                func.sum(
+                    case((RequestLog.status_code.between(500, 599), 1), else_=0)
+                ).label("errors_5xx"),
             )
             .where(and_(RequestLog.api_id == api_id, RequestLog.timestamp >= since))
             .group_by(func.date_trunc(bucket, RequestLog.timestamp))
@@ -120,7 +132,10 @@ class AnalyticsService:
                 total_requests=r.total,
                 errors_4xx=r.errors_4xx or 0,
                 errors_5xx=r.errors_5xx or 0,
-                error_rate_percent=round(((r.errors_4xx or 0) + (r.errors_5xx or 0)) / max(r.total, 1) * 100, 2),
+                error_rate_percent=round(
+                    ((r.errors_4xx or 0) + (r.errors_5xx or 0)) / max(r.total, 1) * 100,
+                    2,
+                ),
             )
             for r in rows
         ]
@@ -191,7 +206,11 @@ class AnalyticsService:
         rows = (await db.execute(stmt)).all()
 
         data = [
-            TrafficPoint(timestamp=r.bucket, request_count=r.request_count, unique_users=r.unique_users)
+            TrafficPoint(
+                timestamp=r.bucket,
+                request_count=r.request_count,
+                unique_users=r.unique_users,
+            )
             for r in rows
         ]
 
@@ -218,13 +237,15 @@ class AnalyticsService:
         stats = (await db.execute(stats_stmt)).one()
 
         return DashboardSummary(
-            total_apis=0,       # filled by health service
+            total_apis=0,  # filled by health service
             healthy_apis=0,
             degraded_apis=0,
             critical_apis=0,
             total_requests_24h=stats.total or 0,
             avg_latency_ms_24h=round(float(stats.avg_latency or 0), 2),
-            error_rate_24h=round((stats.errors or 0) / max(stats.total or 1, 1) * 100, 2),
+            error_rate_24h=round(
+                (stats.errors or 0) / max(stats.total or 1, 1) * 100, 2
+            ),
             p99_latency_ms_24h=round(float(stats.p99 or 0), 2),
             top_apis_by_traffic=[],
             recent_alerts=[],

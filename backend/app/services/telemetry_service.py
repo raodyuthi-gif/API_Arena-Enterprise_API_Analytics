@@ -1,4 +1,5 @@
 """Telemetry service - ingest, persist, and fan-out to Redis."""
+
 import json
 from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -15,11 +16,15 @@ class TelemetryService:
     @classmethod
     async def get_redis(cls) -> aioredis.Redis:
         if cls._redis is None:
-            cls._redis = await aioredis.from_url(settings.REDIS_URL, decode_responses=True)
+            cls._redis = await aioredis.from_url(
+                settings.REDIS_URL, decode_responses=True
+            )
         return cls._redis
 
     @staticmethod
-    async def ingest_batch(payload: BatchIngestRequest, db: AsyncSession) -> IngestResponse:
+    async def ingest_batch(
+        payload: BatchIngestRequest, db: AsyncSession
+    ) -> IngestResponse:
         accepted = 0
         rejected = 0
         errors = []
@@ -67,10 +72,12 @@ class TelemetryService:
             redis = await TelemetryService.get_redis()
             await redis.publish(
                 "telemetry:live",
-                json.dumps({
-                    "accepted": accepted,
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
-                }),
+                json.dumps(
+                    {
+                        "accepted": accepted,
+                        "timestamp": datetime.now(timezone.utc).isoformat(),
+                    }
+                ),
             )
         except Exception:
             pass  # Non-fatal: Redis fan-out is best-effort

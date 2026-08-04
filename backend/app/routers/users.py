@@ -1,4 +1,5 @@
 """Users router - CRUD for users and roles."""
+
 import uuid
 from fastapi import APIRouter, HTTPException, status, Query
 from sqlalchemy import select, func
@@ -33,14 +34,24 @@ async def list_users(
     return UserListResponse(total=total, items=users, page=page, page_size=page_size)
 
 
-@router.post("", response_model=UserResponse, status_code=status.HTTP_201_CREATED, summary="Create a new user (Admin only)")
+@router.post(
+    "",
+    response_model=UserResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create a new user (Admin only)",
+)
 async def create_user(payload: UserCreate, _: CurrentAdmin, db: DbSession):
     # Check uniqueness
-    existing = await db.execute(select(User).where(
-        (User.email == payload.email) | (User.username == payload.username)
-    ))
+    existing = await db.execute(
+        select(User).where(
+            (User.email == payload.email) | (User.username == payload.username)
+        )
+    )
     if existing.scalar_one_or_none():
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email or username already exists")
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Email or username already exists",
+        )
 
     user = User(
         email=payload.email,
@@ -55,21 +66,31 @@ async def create_user(payload: UserCreate, _: CurrentAdmin, db: DbSession):
     return user
 
 
-@router.get("/{user_id}", response_model=UserResponse, summary="Get user by ID (Admin only)")
+@router.get(
+    "/{user_id}", response_model=UserResponse, summary="Get user by ID (Admin only)"
+)
 async def get_user(user_id: uuid.UUID, _: CurrentAdmin, db: DbSession):
     result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
     if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+        )
     return user
 
 
-@router.patch("/{user_id}", response_model=UserResponse, summary="Update user (Admin only)")
-async def update_user(user_id: uuid.UUID, payload: UserUpdate, _: CurrentAdmin, db: DbSession):
+@router.patch(
+    "/{user_id}", response_model=UserResponse, summary="Update user (Admin only)"
+)
+async def update_user(
+    user_id: uuid.UUID, payload: UserUpdate, _: CurrentAdmin, db: DbSession
+):
     result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
     if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+        )
 
     for field, value in payload.model_dump(exclude_none=True).items():
         setattr(user, field, value)
@@ -78,10 +99,16 @@ async def update_user(user_id: uuid.UUID, payload: UserUpdate, _: CurrentAdmin, 
     return user
 
 
-@router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Delete user (Admin only)")
+@router.delete(
+    "/{user_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete user (Admin only)",
+)
 async def delete_user(user_id: uuid.UUID, _: CurrentAdmin, db: DbSession):
     result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
     if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+        )
     await db.delete(user)

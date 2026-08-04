@@ -1,4 +1,5 @@
 """Redis-backed sliding-window rate limiter middleware."""
+
 import time
 from fastapi import Request, Response
 from fastapi.responses import JSONResponse
@@ -25,7 +26,9 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         if self._counters[window_key] > settings.RATE_LIMIT_PER_MINUTE:
             return JSONResponse(
                 status_code=429,
-                content={"detail": f"Rate limit exceeded. Max {settings.RATE_LIMIT_PER_MINUTE} requests/minute."},
+                content={
+                    "detail": f"Rate limit exceeded. Max {settings.RATE_LIMIT_PER_MINUTE} requests/minute."
+                },
             )
 
         response = await call_next(request)

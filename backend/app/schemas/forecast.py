@@ -1,4 +1,5 @@
 """Pydantic schemas for ML forecast responses."""
+
 import uuid
 from datetime import datetime
 from pydantic import BaseModel

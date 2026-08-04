@@ -1,9 +1,15 @@
 """Forecast router - train ML models and generate predictions."""
+
 import uuid
 from fastapi import APIRouter, HTTPException, Query
 
 from app.dependencies import DbSession, CurrentUser, CurrentAnalyst
-from app.schemas.forecast import ForecastResponse, TrainRequest, TrainResponse, AnomalyPoint
+from app.schemas.forecast import (
+    ForecastResponse,
+    TrainRequest,
+    TrainResponse,
+    AnomalyPoint,
+)
 from app.services.forecast_service import ForecastService
 
 router = APIRouter()
@@ -40,12 +46,16 @@ async def train_forecast(
 )
 async def get_forecast(
     api_id: uuid.UUID,
-    horizon_hours: int = Query(default=168, ge=1, le=720, description="Forecast horizon in hours (max 30 days)"),
+    horizon_hours: int = Query(
+        default=168, ge=1, le=720, description="Forecast horizon in hours (max 30 days)"
+    ),
     db: DbSession = ...,
     _: CurrentUser = ...,
 ):
     try:
-        return await ForecastService.predict(api_id=api_id, horizon_hours=horizon_hours, db=db)
+        return await ForecastService.predict(
+            api_id=api_id, horizon_hours=horizon_hours, db=db
+        )
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
 
@@ -55,18 +65,28 @@ async def get_forecast(
     response_model=list[AnomalyPoint],
     summary="Detect traffic anomalies for an API",
     description="Compares recent actual traffic against the trained model's prediction "
-                "and flags hourly points that deviate by more than N standard deviations.",
+    "and flags hourly points that deviate by more than N standard deviations.",
 )
 async def get_anomalies(
     api_id: uuid.UUID,
-    lookback_hours: int = Query(default=168, ge=1, le=720, description="Lookback window in hours (default 7 days)"),
-    sigma_threshold: float = Query(default=2.0, ge=1.0, le=5.0, description="Deviation threshold in std devs"),
+    lookback_hours: int = Query(
+        default=168,
+        ge=1,
+        le=720,
+        description="Lookback window in hours (default 7 days)",
+    ),
+    sigma_threshold: float = Query(
+        default=2.0, ge=1.0, le=5.0, description="Deviation threshold in std devs"
+    ),
     db: DbSession = ...,
     _: CurrentUser = ...,
 ):
     try:
         return await ForecastService.detect_anomalies(
-            api_id=api_id, lookback_hours=lookback_hours, sigma_threshold=sigma_threshold, db=db
+            api_id=api_id,
+            lookback_hours=lookback_hours,
+            sigma_threshold=sigma_threshold,
+            db=db,
         )
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))

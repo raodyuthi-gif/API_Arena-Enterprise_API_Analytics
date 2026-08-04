@@ -6,6 +6,7 @@ retrains the active model for every API that already has one, using
 the freshest telemetry. This is what makes the "auto-retrains daily"
 claim in the README actually true.
 """
+
 import logging
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from sqlalchemy import select
@@ -25,14 +26,20 @@ async def retrain_all_active_models() -> None:
     existing model_type. Failures for one API don't block the others.
     """
     async with AsyncSessionLocal() as db:
-        result = await db.execute(select(ForecastModel).where(ForecastModel.is_active is True))
+        result = await db.execute(
+            select(ForecastModel).where(ForecastModel.is_active is True)
+        )
         active_models = result.scalars().all()
 
-        logger.info("Scheduled retrain: %d active model(s) to refresh", len(active_models))
+        logger.info(
+            "Scheduled retrain: %d active model(s) to refresh", len(active_models)
+        )
 
         for model in active_models:
             try:
-                lookback_days = max(1, (model.training_end - model.training_start).days) or 30
+                lookback_days = (
+                    max(1, (model.training_end - model.training_start).days) or 30
+                )
                 await ForecastService.train_model(
                     api_id=model.api_id,
                     model_type=model.model_type,
@@ -58,7 +65,10 @@ def start_scheduler() -> None:
         next_run_time=None,  # first run after one full interval, not immediately on boot
     )
     scheduler.start()
-    logger.info("Forecast auto-retrain scheduler started (every %sh)", settings.FORECAST_RETRAIN_INTERVAL_HOURS)
+    logger.info(
+        "Forecast auto-retrain scheduler started (every %sh)",
+        settings.FORECAST_RETRAIN_INTERVAL_HOURS,
+    )
 
 
 def stop_scheduler() -> None:

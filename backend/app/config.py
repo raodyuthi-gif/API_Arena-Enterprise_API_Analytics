@@ -1,4 +1,5 @@
 """Application configuration using Pydantic BaseSettings."""
+
 from typing import List
 from pydantic_settings import BaseSettings
 from pydantic import field_validator
@@ -13,7 +14,9 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "change-me-to-a-very-long-random-secret-key"
 
     # ── Database ─────────────────────────────────────────────────
-    DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/api_analytics"
+    DATABASE_URL: str = (
+        "postgresql+asyncpg://postgres:postgres@localhost:5432/api_analytics"
+    )
     DATABASE_POOL_SIZE: int = 10
     DATABASE_MAX_OVERFLOW: int = 20
 
@@ -46,6 +49,7 @@ class Settings(BaseSettings):
     def parse_cors_origins(cls, v):
         if isinstance(v, str):
             import json
+
             return json.loads(v)
         return v
 

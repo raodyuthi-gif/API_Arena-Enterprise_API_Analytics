@@ -1,4 +1,5 @@
 """Forecast service - train ML models and generate traffic predictions."""
+
 import os
 import uuid
 import joblib
@@ -11,12 +12,19 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import settings
 from app.models.telemetry import RequestLog
 from app.models.forecast import ForecastModel, ForecastModelType
-from app.schemas.forecast import ForecastResponse, ForecastPoint, TrainResponse, AnomalyPoint
+from app.schemas.forecast import (
+    ForecastResponse,
+    ForecastPoint,
+    TrainResponse,
+    AnomalyPoint,
+)
 
 
 class ForecastService:
     @staticmethod
-    async def _fetch_training_data(api_id: uuid.UUID, lookback_days: int, db: AsyncSession) -> pd.DataFrame:
+    async def _fetch_training_data(
+        api_id: uuid.UUID, lookback_days: int, db: AsyncSession
+    ) -> pd.DataFrame:
         """Fetch hourly aggregated request counts for training."""
         since = datetime.now(timezone.utc) - timedelta(days=lookback_days)
         stmt = (
@@ -43,7 +51,9 @@ class ForecastService:
         """Train a forecast model on historical telemetry."""
         df = await ForecastService._fetch_training_data(api_id, lookback_days, db)
         if len(df) < 10:
-            raise ValueError("Not enough historical data to train a model (need ≥10 hourly data points)")
+            raise ValueError(
+                "Not enough historical data to train a model (need ≥10 hourly data points)"
+            )
 
         training_start = df["ds"].min().to_pydatetime()
         training_end = df["ds"].max().to_pydatetime()
@@ -57,7 +67,12 @@ class ForecastService:
 
         if model_type == ForecastModelType.PROPHET:
             from prophet import Prophet
-            m = Prophet(yearly_seasonality=False, weekly_seasonality=True, daily_seasonality=True)
+
+            m = Prophet(
+                yearly_seasonality=False,
+                weekly_seasonality=True,
+                daily_seasonality=True,
+            )
             train_df = df[["ds", "y"]].copy()
             train_df["ds"] = train_df["ds"].dt.tz_localize(None)
             m.fit(train_df)
@@ -69,22 +84,36 @@ class ForecastService:
             if not holdout.empty:
                 forecast = m.predict(holdout[["ds"]])
                 actuals = holdout["y"].values
-                preds = forecast["yhat"].values[:len(actuals)]
+                preds = forecast["yhat"].values[: len(actuals)]
                 mae = float(np.mean(np.abs(actuals - preds)))
-                mape = float(np.mean(np.abs((actuals - preds) / np.maximum(actuals, 1))) * 100)
+                mape = float(
+                    np.mean(np.abs((actuals - preds) / np.maximum(actuals, 1))) * 100
+                )
 
         elif model_type == ForecastModelType.LINEAR:
             from sklearn.linear_model import Ridge
             from app.ml.features import build_time_features
+
             X, y = build_time_features(df)
             model = Ridge()
             model.fit(X, y)
             joblib.dump(model, model_filename)
 
         # Mark all previous models inactive
-        old_models = (await db.execute(
-            select(ForecastModel).where(and_(ForecastModel.api_id == api_id, ForecastModel.is_active is True))
-        )).scalars().all()
+        old_models = (
+            (
+                await db.execute(
+                    select(ForecastModel).where(
+                        and_(
+                            ForecastModel.api_id == api_id,
+                            ForecastModel.is_active is True,
+                        )
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
         for old in old_models:
             old.is_active = False
 
@@ -115,16 +144,23 @@ class ForecastService:
         )
 
     @staticmethod
-    async def predict(api_id: uuid.UUID, horizon_hours: int, db: AsyncSession) -> ForecastResponse:
+    async def predict(
+        api_id: uuid.UUID, horizon_hours: int, db: AsyncSession
+    ) -> ForecastResponse:
         """Load the active model and generate a forecast."""
         result = await db.execute(
-            select(ForecastModel).where(
+            select(ForecastModel)
+            .where(
                 and_(ForecastModel.api_id == api_id, ForecastModel.is_active is True)
-            ).order_by(ForecastModel.created_at.desc()).limit(1)
+            )
+            .order_by(ForecastModel.created_at.desc())
+            .limit(1)
         )
         model_record = result.scalar_one_or_none()
         if not model_record:
-            raise ValueError(f"No trained model found for api_id={api_id}. Please train first.")
+            raise ValueError(
+                f"No trained model found for api_id={api_id}. Please train first."
+            )
 
         now = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
         future_dates = [now + timedelta(hours=i) for i in range(1, horizon_hours + 1)]
@@ -133,26 +169,33 @@ class ForecastService:
         data: list[ForecastPoint] = []
 
         if model_record.model_type == ForecastModelType.PROPHET:
-            future_df = pd.DataFrame({"ds": [d.replace(tzinfo=None) for d in future_dates]})
+            future_df = pd.DataFrame(
+                {"ds": [d.replace(tzinfo=None) for d in future_dates]}
+            )
             forecast = model.predict(future_df)
             for i, row in forecast.iterrows():
-                data.append(ForecastPoint(
-                    timestamp=future_dates[i],
-                    predicted_requests=max(0, round(float(row["yhat"]), 2)),
-                    lower_bound=max(0, round(float(row["yhat_lower"]), 2)),
-                    upper_bound=max(0, round(float(row["yhat_upper"]), 2)),
-                ))
+                data.append(
+                    ForecastPoint(
+                        timestamp=future_dates[i],
+                        predicted_requests=max(0, round(float(row["yhat"]), 2)),
+                        lower_bound=max(0, round(float(row["yhat_lower"]), 2)),
+                        upper_bound=max(0, round(float(row["yhat_upper"]), 2)),
+                    )
+                )
         elif model_record.model_type == ForecastModelType.LINEAR:
             from app.ml.features import build_time_features_for_dates
+
             X = build_time_features_for_dates(future_dates)
             preds = model.predict(X)
             for ts, pred in zip(future_dates, preds):
-                data.append(ForecastPoint(
-                    timestamp=ts,
-                    predicted_requests=max(0, round(float(pred), 2)),
-                    lower_bound=None,
-                    upper_bound=None,
-                ))
+                data.append(
+                    ForecastPoint(
+                        timestamp=ts,
+                        predicted_requests=max(0, round(float(pred), 2)),
+                        lower_bound=None,
+                        upper_bound=None,
+                    )
+                )
 
         return ForecastResponse(
             api_id=api_id,
@@ -174,13 +217,18 @@ class ForecastService:
         statistical anomaly-detection approach for time series.
         """
         result = await db.execute(
-            select(ForecastModel).where(
+            select(ForecastModel)
+            .where(
                 and_(ForecastModel.api_id == api_id, ForecastModel.is_active is True)
-            ).order_by(ForecastModel.created_at.desc()).limit(1)
+            )
+            .order_by(ForecastModel.created_at.desc())
+            .limit(1)
         )
         model_record = result.scalar_one_or_none()
         if not model_record:
-            raise ValueError(f"No trained model found for api_id={api_id}. Please train first.")
+            raise ValueError(
+                f"No trained model found for api_id={api_id}. Please train first."
+            )
 
         lookback_days = max(1, lookback_hours // 24 + 1)
         df = await ForecastService._fetch_training_data(api_id, lookback_days, db)
@@ -203,6 +251,7 @@ class ForecastService:
             predicted = forecast["yhat"].values
         else:
             from app.ml.features import build_time_features_for_dates
+
             X = build_time_features_for_dates(list(df["ds"].dt.to_pydatetime()))
             predicted = model.predict(X)
 
@@ -213,11 +262,13 @@ class ForecastService:
         points: list[AnomalyPoint] = []
         for i, row in df.iterrows():
             deviation_sigma = float(residuals[i] / std)
-            points.append(AnomalyPoint(
-                timestamp=row["ds"].to_pydatetime(),
-                actual_requests=int(row["y"]),
-                predicted_requests=round(float(predicted[i]), 2),
-                deviation_sigma=round(deviation_sigma, 2),
-                is_anomaly=abs(deviation_sigma) > sigma_threshold,
-            ))
+            points.append(
+                AnomalyPoint(
+                    timestamp=row["ds"].to_pydatetime(),
+                    actual_requests=int(row["y"]),
+                    predicted_requests=round(float(predicted[i]), 2),
+                    deviation_sigma=round(deviation_sigma, 2),
+                    is_anomaly=abs(deviation_sigma) > sigma_threshold,
+                )
+            )
         return points

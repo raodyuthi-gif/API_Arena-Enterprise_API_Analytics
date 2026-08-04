@@ -1,4 +1,5 @@
 """Health service - composite health score calculation per API."""
+
 import uuid
 from datetime import datetime, timedelta, timezone
 from sqlalchemy import func, select, and_, case
@@ -27,8 +28,12 @@ class HealthService:
             func.count(RequestLog.id).label("total"),
             func.avg(RequestLog.latency_ms).label("avg_latency"),
             func.percentile_cont(0.99).within_group(RequestLog.latency_ms).label("p99"),
-            func.sum(case((RequestLog.status_code >= 500, 1), else_=0)).label("server_errors"),
-            func.sum(case((RequestLog.status_code >= 400, 1), else_=0)).label("all_errors"),
+            func.sum(case((RequestLog.status_code >= 500, 1), else_=0)).label(
+                "server_errors"
+            ),
+            func.sum(case((RequestLog.status_code >= 400, 1), else_=0)).label(
+                "all_errors"
+            ),
         ).where(and_(RequestLog.api_id == api_id, RequestLog.timestamp >= since))
 
         stats = (await db.execute(stmt)).one()
@@ -49,14 +54,20 @@ class HealthService:
         p99 = float(stats.p99 or 0)
 
         # Fetch API SLA targets
-        api_result = await db.execute(select(APIEndpoint).where(APIEndpoint.id == api_id))
+        api_result = await db.execute(
+            select(APIEndpoint).where(APIEndpoint.id == api_id)
+        )
         api = api_result.scalar_one_or_none()
 
         sla_p99 = (api.sla_latency_p99_ms if api else None) or 1000.0
-        sla_error_rate_max = (api.sla_error_rate_max if api else 1.0)
+        sla_error_rate_max = api.sla_error_rate_max if api else 1.0
 
         # Component scores (0-100 each)
-        error_score = max(0, 100 - (error_rate / sla_error_rate_max) * 100) if sla_error_rate_max else 100
+        error_score = (
+            max(0, 100 - (error_rate / sla_error_rate_max) * 100)
+            if sla_error_rate_max
+            else 100
+        )
         latency_score = max(0, 100 - (p99 / sla_p99) * 100) if sla_p99 else 100
         uptime_score = 100.0  # simplified: based on 5xx rate
         if total > 0:
@@ -67,7 +78,8 @@ class HealthService:
             HealthService.WEIGHTS["uptime"] * uptime_score
             + HealthService.WEIGHTS["error_rate"] * error_score
             + HealthService.WEIGHTS["latency"] * latency_score
-            + HealthService.WEIGHTS["trend"] * 100  # trend = always full unless we track degradation
+            + HealthService.WEIGHTS["trend"]
+            * 100  # trend = always full unless we track degradation
         )
         composite = round(min(100.0, max(0.0, composite)), 2)
 
@@ -97,7 +109,9 @@ class HealthService:
         return "critical"
 
     @staticmethod
-    async def save_health_check(api_id: uuid.UUID, health_data: dict, db: AsyncSession) -> HealthCheck:
+    async def save_health_check(
+        api_id: uuid.UUID, health_data: dict, db: AsyncSession
+    ) -> HealthCheck:
         check = HealthCheck(
             api_id=api_id,
             is_healthy=health_data["is_healthy"],

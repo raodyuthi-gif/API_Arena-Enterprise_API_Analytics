@@ -1,4 +1,5 @@
 """Structured JSON request logging middleware."""
+
 import time
 import uuid
 import structlog

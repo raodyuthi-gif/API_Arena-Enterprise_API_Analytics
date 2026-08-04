@@ -1,4 +1,5 @@
 """API Registry router - CRUD for API endpoints, versions, and tags."""
+
 import uuid
 from fastapi import APIRouter, HTTPException, status, Query
 from sqlalchemy import select, func
@@ -7,8 +8,14 @@ from sqlalchemy.orm import selectinload
 from app.dependencies import CurrentUser, CurrentAnalyst, DbSession
 from app.models.api_registry import APIEndpoint, APIVersion, APITag
 from app.schemas.api_registry import (
-    APIEndpointCreate, APIEndpointUpdate, APIEndpointResponse, APIEndpointListResponse,
-    APITagCreate, APITagResponse, APIVersionCreate, APIVersionResponse,
+    APIEndpointCreate,
+    APIEndpointUpdate,
+    APIEndpointResponse,
+    APIEndpointListResponse,
+    APITagCreate,
+    APITagResponse,
+    APIVersionCreate,
+    APIVersionResponse,
 )
 
 router = APIRouter()
@@ -16,13 +23,19 @@ router = APIRouter()
 
 # ── Tags ─────────────────────────────────────────────────────────
 
+
 @router.get("/tags", response_model=list[APITagResponse], summary="List all tags")
 async def list_tags(db: DbSession, _: CurrentUser):
     result = await db.execute(select(APITag).order_by(APITag.name))
     return result.scalars().all()
 
 
-@router.post("/tags", response_model=APITagResponse, status_code=status.HTTP_201_CREATED, summary="Create a tag")
+@router.post(
+    "/tags",
+    response_model=APITagResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create a tag",
+)
 async def create_tag(payload: APITagCreate, db: DbSession, _: CurrentAnalyst):
     tag = APITag(name=payload.name, color=payload.color)
     db.add(tag)
@@ -31,6 +44,7 @@ async def create_tag(payload: APITagCreate, db: DbSession, _: CurrentAnalyst):
 
 
 # ── API Endpoints ─────────────────────────────────────────────────
+
 
 @router.get("", response_model=APIEndpointListResponse, summary="List all APIs")
 async def list_apis(
@@ -57,10 +71,17 @@ async def list_apis(
     result = await db.execute(stmt)
     apis = result.scalars().all()
 
-    return APIEndpointListResponse(total=total, items=apis, page=page, page_size=page_size)
+    return APIEndpointListResponse(
+        total=total, items=apis, page=page, page_size=page_size
+    )
 
 
-@router.post("", response_model=APIEndpointResponse, status_code=status.HTTP_201_CREATED, summary="Register a new API")
+@router.post(
+    "",
+    response_model=APIEndpointResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Register a new API",
+)
 async def create_api(payload: APIEndpointCreate, db: DbSession, _: CurrentAnalyst):
     api = APIEndpoint(
         name=payload.name,
@@ -78,7 +99,9 @@ async def create_api(payload: APIEndpointCreate, db: DbSession, _: CurrentAnalys
     )
     # Attach tags
     if payload.tag_ids:
-        tags_result = await db.execute(select(APITag).where(APITag.id.in_(payload.tag_ids)))
+        tags_result = await db.execute(
+            select(APITag).where(APITag.id.in_(payload.tag_ids))
+        )
         api.tags = tags_result.scalars().all()
 
     db.add(api)
@@ -96,12 +119,16 @@ async def get_api(api_id: uuid.UUID, db: DbSession, _: CurrentUser):
     )
     api = result.scalar_one_or_none()
     if not api:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="API not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="API not found"
+        )
     return api
 
 
 @router.patch("/{api_id}", response_model=APIEndpointResponse, summary="Update API")
-async def update_api(api_id: uuid.UUID, payload: APIEndpointUpdate, db: DbSession, _: CurrentAnalyst):
+async def update_api(
+    api_id: uuid.UUID, payload: APIEndpointUpdate, db: DbSession, _: CurrentAnalyst
+):
     result = await db.execute(
         select(APIEndpoint)
         .options(selectinload(APIEndpoint.tags), selectinload(APIEndpoint.versions))
@@ -109,37 +136,58 @@ async def update_api(api_id: uuid.UUID, payload: APIEndpointUpdate, db: DbSessio
     )
     api = result.scalar_one_or_none()
     if not api:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="API not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="API not found"
+        )
 
-    for field, value in payload.model_dump(exclude_none=True, exclude={"tag_ids"}).items():
+    for field, value in payload.model_dump(
+        exclude_none=True, exclude={"tag_ids"}
+    ).items():
         setattr(api, field, value)
 
     if payload.tag_ids is not None:
-        tags_result = await db.execute(select(APITag).where(APITag.id.in_(payload.tag_ids)))
+        tags_result = await db.execute(
+            select(APITag).where(APITag.id.in_(payload.tag_ids))
+        )
         api.tags = tags_result.scalars().all()
 
     await db.flush()
     return api
 
 
-@router.delete("/{api_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Delete API")
+@router.delete(
+    "/{api_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Delete API"
+)
 async def delete_api(api_id: uuid.UUID, db: DbSession, _: CurrentAnalyst):
     result = await db.execute(select(APIEndpoint).where(APIEndpoint.id == api_id))
     api = result.scalar_one_or_none()
     if not api:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="API not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="API not found"
+        )
     await db.delete(api)
 
 
 # ── Versions ─────────────────────────────────────────────────────
 
-@router.post("/{api_id}/versions", response_model=APIVersionResponse, status_code=status.HTTP_201_CREATED)
-async def add_version(api_id: uuid.UUID, payload: APIVersionCreate, db: DbSession, _: CurrentAnalyst):
+
+@router.post(
+    "/{api_id}/versions",
+    response_model=APIVersionResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def add_version(
+    api_id: uuid.UUID, payload: APIVersionCreate, db: DbSession, _: CurrentAnalyst
+):
     result = await db.execute(select(APIEndpoint).where(APIEndpoint.id == api_id))
     if not result.scalar_one_or_none():
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="API not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="API not found"
+        )
 
-    version = APIVersion(api_id=api_id, version=payload.version, changelog=payload.changelog)
+    version = APIVersion(
+        api_id=api_id, version=payload.version, changelog=payload.changelog
+    )
     db.add(version)
     await db.flush()
     return version

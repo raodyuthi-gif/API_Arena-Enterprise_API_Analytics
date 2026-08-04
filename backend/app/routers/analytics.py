@@ -1,4 +1,5 @@
 """Analytics router - latency, errors, traffic, and dashboard summary."""
+
 import uuid
 from fastapi import APIRouter, Query
 
@@ -29,7 +30,10 @@ async def get_latency(
 ):
     if window not in VALID_WINDOWS:
         from fastapi import HTTPException
-        raise HTTPException(status_code=400, detail=f"Invalid window. Choose from {VALID_WINDOWS}")
+
+        raise HTTPException(
+            status_code=400, detail=f"Invalid window. Choose from {VALID_WINDOWS}"
+        )
     return await AnalyticsService.get_latency_analytics(api_id, window, db)
 
 

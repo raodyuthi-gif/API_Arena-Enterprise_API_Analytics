@@ -1,6 +1,7 @@
 """
 Enterprise API Analytics Platform - FastAPI Application Entry Point
 """
+
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -8,7 +9,17 @@ from prometheus_fastapi_instrumentator import Instrumentator
 
 from app.config import settings
 from app.database import create_tables
-from app.routers import auth, users, registry, telemetry, analytics, health, forecast, dashboard, admin
+from app.routers import (
+    auth,
+    users,
+    registry,
+    telemetry,
+    analytics,
+    health,
+    forecast,
+    dashboard,
+    admin,
+)
 from app.middleware.logging import RequestLoggingMiddleware
 from app.middleware.rate_limit import RateLimitMiddleware
 from app.scheduler import start_scheduler, stop_scheduler
