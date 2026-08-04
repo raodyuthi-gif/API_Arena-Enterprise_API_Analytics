@@ -57,7 +57,7 @@ jobs:
           cache: "pip"
           cache-dependency-path: backend/requirements.txt
       - run: pip install -r backend/requirements.txt
-      - run: cd backend && pytest ../tests/ -v --cov=app --cov-report=term --cov-report=xml
+      - run: cd backend && PYTHONPATH=. pytest ../tests/ -v --cov=app --cov-report=term --cov-report=xml
       - uses: actions/upload-artifact@v4
         with:
           name: backend-coverage
@@ -91,7 +91,7 @@ jobs:
         with:
           context: ./backend
           push: false
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/api-analytics-backend:${{ github.sha }}
+          tags: enterprise-api-analytics-backend:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
       - name: Build frontend image
@@ -99,6 +99,6 @@ jobs:
         with:
           context: ./frontend
           push: false
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/api-analytics-frontend:${{ github.sha }}
+          tags: enterprise-api-analytics-frontend:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
