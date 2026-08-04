@@ -1,0 +1,17 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: api-analytics
+
+resources:
+  - namespace.yaml
+  - configmap.yaml
+  - postgres.yaml
+  - redis.yaml
+  - backend.yaml
+  - frontend.yaml
+  - ingress.yaml
+
+# secret.yaml is intentionally NOT listed here — create it locally from
+# secret.example.yaml (never commit real secrets) and add it in each overlay,
+# or manage it with a secrets operator / `kubectl create secret`.

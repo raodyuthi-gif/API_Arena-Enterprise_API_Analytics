@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "api-analytics.fullname" . }}-frontend
+  labels:
+    {{- include "api-analytics.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.frontend.replicas }}
+  selector:
+    matchLabels:
+      app: {{ include "api-analytics.fullname" . }}-frontend
+  template:
+    metadata:
+      labels:
+        app: {{ include "api-analytics.fullname" . }}-frontend
+    spec:
+      containers:
+        - name: frontend
+          image: {{ .Values.frontend.image }}
+          ports:
+            - containerPort: {{ .Values.frontend.port }}
+          env:
+            - name: VITE_API_URL
+              value: "http://{{ include "api-analytics.fullname" . }}-backend:{{ .Values.backend.port }}"
+          resources:
+            {{- toYaml .Values.frontend.resources | nindent 12 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "api-analytics.fullname" . }}-frontend
+  labels:
+    {{- include "api-analytics.labels" . | nindent 4 }}
+spec:
+  selector:
+    app: {{ include "api-analytics.fullname" . }}-frontend
+  ports:
+    - port: {{ .Values.frontend.port }}
+      targetPort: {{ .Values.frontend.port }}

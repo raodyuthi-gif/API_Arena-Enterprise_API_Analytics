@@ -1,0 +1,47 @@
+backend:
+  image: enterprise-api-analytics-backend:latest
+  replicas: 2
+  port: 8000
+  resources:
+    requests: { cpu: 250m, memory: 256Mi }
+    limits: { cpu: 1, memory: 1Gi }
+  env:
+    APP_ENV: production
+    DEBUG: "false"
+    RATE_LIMIT_PER_MINUTE: "120"
+    PROMETHEUS_ENABLED: "true"
+
+frontend:
+  image: enterprise-api-analytics-frontend:latest
+  replicas: 2
+  port: 80
+  resources:
+    requests: { cpu: 100m, memory: 128Mi }
+    limits: { cpu: 500m, memory: 512Mi }
+
+postgres:
+  image: postgres:15-alpine
+  storage: 10Gi
+  database: api_analytics
+  username: postgres
+
+redis:
+  image: redis:7-alpine
+
+secrets:
+  # Overridden via --set or a separate values-secrets.yaml that is NEVER committed
+  secretKey: "change-me"
+  jwtSecretKey: "change-me"
+  postgresPassword: "postgres"
+  grafanaAdminPassword: "admin"
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 8
+  targetCPUUtilizationPercentage: 70
+
+ingress:
+  enabled: true
+  className: nginx
+  host: api-analytics.example.com

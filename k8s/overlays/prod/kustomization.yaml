@@ -1,0 +1,31 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: api-analytics
+namePrefix: prod-
+
+resources:
+  - ../../base
+  # secret.yaml is intentionally NOT included here.
+  # Create it out-of-band in the cluster, e.g.:
+  #   kubectl create secret generic backend-secret -n api-analytics \
+  #     --from-literal=SECRET_KEY=... --from-literal=JWT_SECRET_KEY=... \
+  #     --from-literal=DATABASE_URL=... --from-literal=REDIS_URL=... \
+  #     --from-literal=POSTGRES_PASSWORD=... --from-literal=GRAFANA_ADMIN_PASSWORD=...
+  # or manage it with Sealed Secrets / Vault / your cloud secrets manager.
+
+patches:
+  - target:
+      kind: Deployment
+      name: backend
+    patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 3
+  - target:
+      kind: Deployment
+      name: frontend
+    patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 3

@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backend-config
+  namespace: api-analytics
+data:
+  APP_ENV: "production"
+  APP_PORT: "8000"
+  DEBUG: "false"
+  DATABASE_POOL_SIZE: "10"
+  DATABASE_MAX_OVERFLOW: "20"
+  JWT_ALGORITHM: "HS256"
+  JWT_ACCESS_TOKEN_EXPIRE_MINUTES: "30"
+  JWT_REFRESH_TOKEN_EXPIRE_DAYS: "7"
+  FORECAST_MODEL_DIR: "app/ml/models"
+  FORECAST_RETRAIN_INTERVAL_HOURS: "24"
+  FORECAST_HORIZON_HOURS: "168"
+  RATE_LIMIT_PER_MINUTE: "120"
+  PROMETHEUS_ENABLED: "true"
+  CORS_ORIGINS: '["http://localhost:5173"]'
