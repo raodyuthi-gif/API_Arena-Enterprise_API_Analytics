@@ -6,7 +6,7 @@ import joblib
 import numpy as np
 import pandas as pd
 from datetime import datetime, timedelta, timezone
-from sqlalchemy import select, and_, func
+from sqlalchemy import select, and_, func, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
@@ -27,14 +27,20 @@ class ForecastService:
     ) -> pd.DataFrame:
         """Fetch hourly aggregated request counts for training."""
         since = datetime.now(timezone.utc) - timedelta(days=lookback_days)
+        # Embed "hour" as literal SQL text (not a bind parameter) and reuse the
+        # SAME expression object in SELECT/GROUP BY/ORDER BY. Passing it as a
+        # bound parameter three separate times makes asyncpg/Postgres treat
+        # them as distinct expressions, causing a GroupingError even though
+        # the SQL text looks identical.
+        bucket_expr = func.date_trunc(text("'hour'"), RequestLog.timestamp)
         stmt = (
             select(
-                func.date_trunc("hour", RequestLog.timestamp).label("ds"),
+                bucket_expr.label("ds"),
                 func.count(RequestLog.id).label("y"),
             )
             .where(and_(RequestLog.api_id == api_id, RequestLog.timestamp >= since))
-            .group_by(func.date_trunc("hour", RequestLog.timestamp))
-            .order_by(func.date_trunc("hour", RequestLog.timestamp))
+            .group_by(bucket_expr)
+            .order_by(bucket_expr)
         )
         rows = (await db.execute(stmt)).all()
         df = pd.DataFrame(rows, columns=["ds", "y"])
@@ -106,7 +112,7 @@ class ForecastService:
                     select(ForecastModel).where(
                         and_(
                             ForecastModel.api_id == api_id,
-                            ForecastModel.is_active is True,
+                            ForecastModel.is_active.is_(True),
                         )
                     )
                 )
@@ -151,7 +157,7 @@ class ForecastService:
         result = await db.execute(
             select(ForecastModel)
             .where(
-                and_(ForecastModel.api_id == api_id, ForecastModel.is_active is True)
+                and_(ForecastModel.api_id == api_id, ForecastModel.is_active.is_(True))
             )
             .order_by(ForecastModel.created_at.desc())
             .limit(1)
@@ -219,7 +225,7 @@ class ForecastService:
         result = await db.execute(
             select(ForecastModel)
             .where(
-                and_(ForecastModel.api_id == api_id, ForecastModel.is_active is True)
+                and_(ForecastModel.api_id == api_id, ForecastModel.is_active.is_(True))
             )
             .order_by(ForecastModel.created_at.desc())
             .limit(1)

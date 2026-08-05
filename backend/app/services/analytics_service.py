@@ -2,7 +2,7 @@
 
 import uuid
 from datetime import datetime, timedelta, timezone
-from sqlalchemy import func, select, and_, case, cast, Text
+from sqlalchemy import func, select, and_, case, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.telemetry import RequestLog
@@ -47,12 +47,17 @@ class AnalyticsService:
         delta = AnalyticsService._window_to_delta(window)
         since = datetime.now(timezone.utc) - delta
         bucket = AnalyticsService._bucket_size(window)
+        # Embed the bucket size as literal SQL text (safe: it only ever comes
+        # from the fixed whitelist in _bucket_size) and reuse ONE expression
+        # object across SELECT/GROUP BY/ORDER BY. Binding it as a parameter
+        # three separate times makes Postgres treat them as different
+        # expressions and raise a GroupingError, even though the SQL text
+        # looks identical.
+        bucket_expr = func.date_trunc(text(f"'{bucket}'"), RequestLog.timestamp)
 
         stmt = (
             select(
-                func.date_trunc(cast(bucket, Text), RequestLog.timestamp).label(
-                    "bucket"
-                ),
+                bucket_expr.label("bucket"),
                 func.percentile_cont(0.50)
                 .within_group(RequestLog.latency_ms)
                 .label("p50"),
@@ -66,8 +71,8 @@ class AnalyticsService:
                 func.count(RequestLog.id).label("count"),
             )
             .where(and_(RequestLog.api_id == api_id, RequestLog.timestamp >= since))
-            .group_by(func.date_trunc(cast(bucket, Text), RequestLog.timestamp))
-            .order_by(func.date_trunc(cast(bucket, Text), RequestLog.timestamp))
+            .group_by(bucket_expr)
+            .order_by(bucket_expr)
         )
         result = await db.execute(stmt)
         rows = result.all()
@@ -110,12 +115,11 @@ class AnalyticsService:
         delta = AnalyticsService._window_to_delta(window)
         since = datetime.now(timezone.utc) - delta
         bucket = AnalyticsService._bucket_size(window)
+        bucket_expr = func.date_trunc(text(f"'{bucket}'"), RequestLog.timestamp)
 
         stmt = (
             select(
-                func.date_trunc(cast(bucket, Text), RequestLog.timestamp).label(
-                    "bucket"
-                ),
+                bucket_expr.label("bucket"),
                 func.count(RequestLog.id).label("total"),
                 func.sum(
                     case((RequestLog.status_code.between(400, 499), 1), else_=0)
@@ -125,8 +129,8 @@ class AnalyticsService:
                 ).label("errors_5xx"),
             )
             .where(and_(RequestLog.api_id == api_id, RequestLog.timestamp >= since))
-            .group_by(func.date_trunc(cast(bucket, Text), RequestLog.timestamp))
-            .order_by(func.date_trunc(cast(bucket, Text), RequestLog.timestamp))
+            .group_by(bucket_expr)
+            .order_by(bucket_expr)
         )
         rows = (await db.execute(stmt)).all()
 
@@ -196,18 +200,17 @@ class AnalyticsService:
         delta = AnalyticsService._window_to_delta(window)
         since = datetime.now(timezone.utc) - delta
         bucket = AnalyticsService._bucket_size(window)
+        bucket_expr = func.date_trunc(text(f"'{bucket}'"), RequestLog.timestamp)
 
         stmt = (
             select(
-                func.date_trunc(cast(bucket, Text), RequestLog.timestamp).label(
-                    "bucket"
-                ),
+                bucket_expr.label("bucket"),
                 func.count(RequestLog.id).label("request_count"),
                 func.count(func.distinct(RequestLog.user_id)).label("unique_users"),
             )
             .where(and_(RequestLog.api_id == api_id, RequestLog.timestamp >= since))
-            .group_by(func.date_trunc(cast(bucket, Text), RequestLog.timestamp))
-            .order_by(func.date_trunc(cast(bucket, Text), RequestLog.timestamp))
+            .group_by(bucket_expr)
+            .order_by(bucket_expr)
         )
         rows = (await db.execute(stmt)).all()
 
