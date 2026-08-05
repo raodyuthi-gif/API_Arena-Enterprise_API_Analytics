@@ -174,7 +174,7 @@ def upgrade() -> None:
         sa.Column("training_samples", sa.Integer(), nullable=False),
         sa.Column("mae", sa.Float(), nullable=True),
         sa.Column("mape", sa.Float(), nullable=True),
-        sa.Column("is_active", sa.String(5), server_default="true"),
+        sa.Column("is_active", sa.Boolean(), server_default=sa.true()),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("metadata", postgresql.JSONB(), nullable=True),
     )
