@@ -105,7 +105,7 @@ class ForecastService:
             model.fit(X, y)
             joblib.dump(model, model_filename)
 
-        # Mark all previous models inactive
+        # Mark all previous models inactive safely using standard SQLAlchemy expression
         old_models = (
             (
                 await db.execute(
@@ -157,7 +157,10 @@ class ForecastService:
         result = await db.execute(
             select(ForecastModel)
             .where(
-                and_(ForecastModel.api_id == api_id, ForecastModel.is_active.is_(True))
+                and_(
+                    ForecastModel.api_id == api_id,
+                    ForecastModel.is_active.is_(True),
+                )
             )
             .order_by(ForecastModel.created_at.desc())
             .limit(1)
@@ -219,13 +222,15 @@ class ForecastService:
     ) -> list[AnomalyPoint]:
         """Compare actual traffic against the active model's in-sample prediction
         for the recent window and flag points that deviate by more than
-        `sigma_threshold` standard deviations of the residuals — a standard
-        statistical anomaly-detection approach for time series.
+        `sigma_threshold` standard deviations of the residuals.
         """
         result = await db.execute(
             select(ForecastModel)
             .where(
-                and_(ForecastModel.api_id == api_id, ForecastModel.is_active.is_(True))
+                and_(
+                    ForecastModel.api_id == api_id,
+                    ForecastModel.is_active.is_(True),
+                )
             )
             .order_by(ForecastModel.created_at.desc())
             .limit(1)
