@@ -2,7 +2,7 @@
 
 import uuid
 from datetime import datetime, timedelta, timezone
-from sqlalchemy import func, select, and_, case
+from sqlalchemy import func, select, and_, case, cast, Text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.telemetry import RequestLog
@@ -50,7 +50,7 @@ class AnalyticsService:
 
         stmt = (
             select(
-                func.date_trunc(bucket, RequestLog.timestamp).label("bucket"),
+                func.date_trunc(cast(bucket, Text), RequestLog.timestamp).label("bucket"),
                 func.percentile_cont(0.50)
                 .within_group(RequestLog.latency_ms)
                 .label("p50"),
