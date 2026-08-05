@@ -49,7 +49,6 @@ jobs:
       REDIS_URL: redis://localhost:6379/0
       SECRET_KEY: ci-secret-key
       JWT_SECRET_KEY: ci-jwt-secret
-      PYTHONPATH: backend
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -58,11 +57,11 @@ jobs:
           cache: "pip"
           cache-dependency-path: backend/requirements.txt
       - run: pip install -r backend/requirements.txt
-      - run: python -m pytest tests/ -v --cov=backend/app --cov-report=term --cov-report=xml
+      - run: cd backend && pytest ../tests/ -v --cov=app --cov-report=term --cov-report=xml
       - uses: actions/upload-artifact@v4
         with:
           name: backend-coverage
-          path: coverage.xml
+          path: backend/coverage.xml
 
   frontend-build:
     runs-on: ubuntu-latest
