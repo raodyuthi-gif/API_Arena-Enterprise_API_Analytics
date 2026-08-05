@@ -50,7 +50,9 @@ class AnalyticsService:
 
         stmt = (
             select(
-                func.date_trunc(cast(bucket, Text), RequestLog.timestamp).label("bucket"),
+                func.date_trunc(cast(bucket, Text), RequestLog.timestamp).label(
+                    "bucket"
+                ),
                 func.percentile_cont(0.50)
                 .within_group(RequestLog.latency_ms)
                 .label("p50"),
@@ -64,8 +66,8 @@ class AnalyticsService:
                 func.count(RequestLog.id).label("count"),
             )
             .where(and_(RequestLog.api_id == api_id, RequestLog.timestamp >= since))
-            .group_by(func.date_trunc(bucket, RequestLog.timestamp))
-            .order_by(func.date_trunc(bucket, RequestLog.timestamp))
+            .group_by(func.date_trunc(cast(bucket, Text), RequestLog.timestamp))
+            .order_by(func.date_trunc(cast(bucket, Text), RequestLog.timestamp))
         )
         result = await db.execute(stmt)
         rows = result.all()
@@ -111,7 +113,9 @@ class AnalyticsService:
 
         stmt = (
             select(
-                func.date_trunc(bucket, RequestLog.timestamp).label("bucket"),
+                func.date_trunc(cast(bucket, Text), RequestLog.timestamp).label(
+                    "bucket"
+                ),
                 func.count(RequestLog.id).label("total"),
                 func.sum(
                     case((RequestLog.status_code.between(400, 499), 1), else_=0)
@@ -121,8 +125,8 @@ class AnalyticsService:
                 ).label("errors_5xx"),
             )
             .where(and_(RequestLog.api_id == api_id, RequestLog.timestamp >= since))
-            .group_by(func.date_trunc(bucket, RequestLog.timestamp))
-            .order_by(func.date_trunc(bucket, RequestLog.timestamp))
+            .group_by(func.date_trunc(cast(bucket, Text), RequestLog.timestamp))
+            .order_by(func.date_trunc(cast(bucket, Text), RequestLog.timestamp))
         )
         rows = (await db.execute(stmt)).all()
 
@@ -195,13 +199,15 @@ class AnalyticsService:
 
         stmt = (
             select(
-                func.date_trunc(bucket, RequestLog.timestamp).label("bucket"),
+                func.date_trunc(cast(bucket, Text), RequestLog.timestamp).label(
+                    "bucket"
+                ),
                 func.count(RequestLog.id).label("request_count"),
                 func.count(func.distinct(RequestLog.user_id)).label("unique_users"),
             )
             .where(and_(RequestLog.api_id == api_id, RequestLog.timestamp >= since))
-            .group_by(func.date_trunc(bucket, RequestLog.timestamp))
-            .order_by(func.date_trunc(bucket, RequestLog.timestamp))
+            .group_by(func.date_trunc(cast(bucket, Text), RequestLog.timestamp))
+            .order_by(func.date_trunc(cast(bucket, Text), RequestLog.timestamp))
         )
         rows = (await db.execute(stmt)).all()
 
